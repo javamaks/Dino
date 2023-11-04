@@ -1,7 +1,9 @@
 ﻿#include <SFML/Graphics.hpp>
 #include <time.h>
-
+#include <vector>
+#include <iostream>
 using namespace sf;
+using namespace std;
 
 int main()
 {
@@ -12,12 +14,10 @@ int main()
     dinoTexture.loadFromFile("images/PlayerSpriteSheet.png");
     Texture platoTexture;
     platoTexture.loadFromFile("images/GroundImage.png");
-    Texture cactusTexture1;
-    cactusTexture1.loadFromFile("images/Cactus1.png");
-    Texture cactusTexture2;
-    cactusTexture2.loadFromFile("images/Cactus2.png");
-    Texture cactusTexture3;
-    cactusTexture3.loadFromFile("images/Cactus3.png");
+    Texture cactusTexture[3];
+    cactusTexture[0].loadFromFile("images/Cactus1.png");
+    cactusTexture[1].loadFromFile("images/Cactus2.png");
+    cactusTexture[2].loadFromFile("images/Cactus3.png");
 
     Font font;
     font.loadFromFile("images/Font8bit.ttf");
@@ -26,30 +26,21 @@ int main()
     text.setFont(font);
     text.setCharacterSize(24);
     text.setFillColor(Color::Black);
-    text.setString("My first Dino game, Javamaks");
+    text.setString("DINO");
 
     text.setPosition(window.getSize().x - text.getLocalBounds().width - 10, 10);
 
     Sprite player_stand;
-    Sprite player_left;
-    Sprite player_right;
-    Sprite open_eye;
-    Sprite slope_right;
     Sprite plato1;
-    Sprite plato2; 
-    Sprite cactus;
+    Sprite plato2;
 
-    cactus.setTexture(cactusTexture1);
-    cactus.setPosition(250, 300);
-
-    bool isJumping = false; 
-    float jumpHeight = 150.0f; 
-
+    bool isJumping = false;
+    float jumpHeight = 100.0f;
 
     plato1.setPosition(0, 400);
     plato1.setTexture(platoTexture);
 
-    plato2.setPosition(plato1.getGlobalBounds().width, 400); 
+    plato2.setPosition(plato1.getGlobalBounds().width, 400);
     plato2.setTexture(platoTexture);
 
     player_stand.setTexture(dinoTexture);
@@ -59,15 +50,19 @@ int main()
     float timeSinceLastChange = 0;
     float switchTime = 100;
 
-    Clock clock;
+    Clock gameClock;
     bool isRunning = false;
     bool spacePressed = false;
 
-    while (window.isOpen()) {
-        float time = clock.getElapsedTime().asMicroseconds();
-        clock.restart();
+    vector<Sprite> cactiOnPlatform; // Вектор для хранения кактусов
 
-        time = time / 1500;
+    int cactusInterval = 300;
+    int cactusTimer = 0;
+
+    while (window.isOpen()) {
+        float elapsedTime = gameClock.getElapsedTime().asMicroseconds();
+        gameClock.restart();
+        elapsedTime = elapsedTime / 1500;
 
         Event event;
         while (window.pollEvent(event)) {
@@ -84,25 +79,24 @@ int main()
                 }
             }
         }
+
         if (isJumping) {
-            player_stand.move(0, -0.5 * time); 
+            player_stand.move(0, -0.5 * elapsedTime);
             if (player_stand.getPosition().y <= 300 - jumpHeight) {
-                isJumping = false; 
+                isJumping = false;
             }
-            
         }
         else if (player_stand.getPosition().y < 300) {
-            player_stand.move(0, 0.5 * time); 
+            player_stand.move(0, 0.5 * elapsedTime);
             if (player_stand.getPosition().y >= 300) {
-                player_stand.setPosition(player_stand.getPosition().x, 300); 
+                player_stand.setPosition(player_stand.getPosition().x, 300);
             }
         }
 
         player_stand.setTextureRect(IntRect(currentSprite * 98, 0, 98, 110));
 
         if (spacePressed) {
-            timeSinceLastChange += time;
-
+            timeSinceLastChange += elapsedTime;
             if (timeSinceLastChange >= switchTime) {
                 currentSprite++;
                 if (currentSprite >= 3) {
@@ -110,49 +104,61 @@ int main()
                 }
                 timeSinceLastChange = 0;
             }
-
             player_stand.setTextureRect(IntRect(currentSprite * 98, 0, 98, 110));
         }
 
         if (isRunning) {
             if (Keyboard::isKeyPressed(Keyboard::Left)) {
-                player_stand.move(-0.5 * time, 0);
+                player_stand.move(-0.5 * elapsedTime, 0);
             }
             if (Keyboard::isKeyPressed(Keyboard::Right)) {
-                player_stand.move(0.5 * time, 0);
+                player_stand.move(0.5 * elapsedTime, 0);
             }
             if (Keyboard::isKeyPressed(Keyboard::Up)) {
-                player_stand.move(0, -0.5 * time);
+                player_stand.move(0, -0.5 * elapsedTime);
             }
             if (Keyboard::isKeyPressed(Keyboard::Down)) {
-                player_stand.move(0, 0.5 * time);
+                player_stand.move(0, 0.5 * elapsedTime);
             }
         }
 
-        
-        plato1.move(-0.1 * time, 0);
-        plato2.move(-0.1 * time, 0);
+        plato1.move(-0.2 * elapsedTime, 0);
+        plato2.move(-0.2 * elapsedTime, 0);
 
-        
         if (plato1.getPosition().x <= -plato1.getGlobalBounds().width) {
             plato1.setPosition(plato2.getPosition().x + plato2.getGlobalBounds().width, 400);
         }
 
-       
         if (plato2.getPosition().x <= -plato2.getGlobalBounds().width) {
             plato2.setPosition(plato1.getPosition().x + plato1.getGlobalBounds().width, 400);
         }
 
-        window.clear(Color::White);
+        cactusTimer += elapsedTime;
+        if (cactusTimer >= cactusInterval) {
+            int randomTextureIndex = rand() % 3;
+            Sprite newCactus;
+            newCactus.setTexture(cactusTexture[randomTextureIndex]);
+            newCactus.setPosition(window.getSize().x, plato1.getPosition().y - newCactus.getGlobalBounds().height);
+            cactiOnPlatform.push_back(newCactus);
+            cactusTimer = 0;
+        }
+
+        window.clear();
         window.draw(plato1);
         window.draw(plato2);
         window.draw(player_stand);
         window.draw(text);
-        window.draw(cactus);
+
+        for (int i = 0; i < cactiOnPlatform.size(); i++) {
+            cactiOnPlatform[i].move(-0.1 * elapsedTime, 0);
+            window.draw(cactiOnPlatform[i]);
+        }
 
         window.display();
     }
 
     return 0;
 }
+
+
 
